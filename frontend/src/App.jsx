@@ -33,6 +33,7 @@ function App() {
   const [newHabitGoal, setNewHabitGoal] = useState('')
   const [showCalendar, setShowCalendar] = useState(false)
   const [calendarMonth, setCalendarMonth] = useState(new Date())
+  const [selectedEditDate, setSelectedEditDate] = useState(null)
 
 
   const today = new Date().toISOString().split('T')[0]
@@ -181,9 +182,9 @@ function getHabitDotsForDay(date) {
       })
   }
 
-  function handleToggleHabit(habit) {
+  function handleToggleHabitForDate(habit, dateStr) {
     const existingLog = habitLogs.find(
-      (log) => log.habit === habit.id && log.date === today
+      (log) => log.habit === habit.id && log.date === dateStr
     )
 
     if (existingLog) {
@@ -196,7 +197,7 @@ function getHabitDotsForDay(date) {
       fetch('http://127.0.0.1:8000/api/habit-logs/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ habit: habit.id, date: today, is_completed: true }),
+        body: JSON.stringify({ habit: habit.id, date: dateStr, is_completed: true }),
       }).then(() => fetchHabitLogs())
     }
   }
@@ -206,6 +207,40 @@ function getHabitDotsForDay(date) {
       (log) => log.habit === habitId && log.date === today
     )
     return log ? log.value || 0 : 0
+  }
+  function isHabitCompletedOnDate(habitId, dateStr) {
+    return habitLogs.some(
+      (log) => log.habit === habitId && log.date === dateStr && log.is_completed
+    )
+  }
+
+  function getValueForDate(habitId, dateStr) {
+    const log = habitLogs.find(
+      (log) => log.habit === habitId && log.date === dateStr
+    )
+    return log ? log.value || 0 : 0
+  }
+
+  function handleChangeValueForDate(habit, dateStr, delta) {
+    const existingLog = habitLogs.find(
+      (log) => log.habit === habit.id && log.date === dateStr
+    )
+    const currentValue = existingLog ? existingLog.value || 0 : 0
+    const newValue = Math.max(0, currentValue + delta)
+
+    if (existingLog) {
+      fetch(`http://127.0.0.1:8000/api/habit-logs/${existingLog.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: newValue }),
+      }).then(() => fetchHabitLogs())
+    } else {
+      fetch('http://127.0.0.1:8000/api/habit-logs/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ habit: habit.id, date: dateStr, value: newValue }),
+      }).then(() => fetchHabitLogs())
+    }
   }
 
   function handleChangeValue(habit, delta) {
@@ -337,7 +372,11 @@ function getHabitDotsForDay(date) {
 
                 <div className="calendar-grid">
                   {getDaysInMonth(calendarMonth).map((day) => (
-                    <div key={day.toISOString()} className="calendar-day">
+                    <div
+                      key={day.toISOString()}
+                      className="calendar-day"
+                      onClick={() => setSelectedEditDate(day)}
+                    >
                       <div>{day.getDate()}</div>
                       <div className="dot-row">
                         {getHabitDotsForDay(day).map((habitId) => (
@@ -352,6 +391,43 @@ function getHabitDotsForDay(date) {
                   ))}
                 </div>
 
+                {selectedEditDate && (
+                  <div className="edit-day-panel">
+                    <h4>{selectedEditDate.toDateString()}</h4>
+                    <ul className="task-list">
+                      {habits
+                        .filter((habit) => selectedCalendarHabits.includes(habit.id))
+                        .map((habit) => {
+                          const dateStr = formatDate(selectedEditDate)
+                          return (
+                            <li className="task-item" key={habit.id}>
+                              {habit.is_numeric ? (
+                                <>
+                                  <span>{habit.name}</span>
+                                  <div className="stepper">
+                                    <button onClick={() => handleChangeValueForDate(habit, dateStr, -0.5)}>−</button>
+                                    <span className="stepper-value">
+                                      {getValueForDate(habit.id, dateStr)} {categoryUnits[habit.category] || ''}
+                                    </span>
+                                    <button onClick={() => handleChangeValueForDate(habit, dateStr, 0.5)}>+</button>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <input
+                                    type="checkbox"
+                                    checked={isHabitCompletedOnDate(habit.id, dateStr)}
+                                    onChange={() => handleToggleHabitForDate(habit, dateStr)}
+                                  />
+                                  <span>{habit.name}</span>
+                                </>
+                              )}
+                            </li>
+                          )
+                        })}
+                    </ul>
+                  </div>
+                )}
 
                 <button onClick={() => setShowCalendar(false)}>Close</button>
               </div>
