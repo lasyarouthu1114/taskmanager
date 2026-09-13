@@ -25,7 +25,7 @@ class Habit(models.Model):
         ('custom', 'Custom'),
     ]
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='custom')
     reminder_time = models.TimeField(null=True, blank=True)
     goal_value = models.FloatField(null=True, blank=True)
