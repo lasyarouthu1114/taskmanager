@@ -12,6 +12,7 @@ const categoryLabels = {
   study: 'Study',
   custom: 'Custom',
 }
+
 const categoryUnits = {
   nutrition: 'glasses',
   sleep: 'hrs',
@@ -19,6 +20,7 @@ const categoryUnits = {
   study: 'hrs',
   custom: '',
 }
+
 function App() {
   const [tasks, setTasks] = useState([])
   const [newTitle, setNewTitle] = useState('')
@@ -29,6 +31,8 @@ function App() {
   const [newHabitCategory, setNewHabitCategory] = useState('custom')
   const [newHabitIsNumeric, setNewHabitIsNumeric] = useState(false)
   const [newHabitGoal, setNewHabitGoal] = useState('')
+  const [showCalendar, setShowCalendar] = useState(false)
+  const [calendarMonth, setCalendarMonth] = useState(new Date())
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -106,6 +110,18 @@ function App() {
     })
 
     return grouped
+  }
+
+  function getDaysInMonth(date) {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+    const days = []
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day))
+    }
+    return days
   }
 
   function handleAddHabit(event) {
@@ -240,6 +256,28 @@ function App() {
         <>
           <h2>Today's Habits</h2>
 
+          <button className="calendar-icon-btn" onClick={() => setShowCalendar(true)}>
+            📅
+          </button>
+
+          {showCalendar && (
+            <div className="modal-overlay" onClick={() => setShowCalendar(false)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <h3>
+                  {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </h3>
+                <div className="calendar-grid">
+                  {getDaysInMonth(calendarMonth).map((day) => (
+                    <div key={day.toISOString()} className="calendar-day">
+                      {day.getDate()}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setShowCalendar(false)}>Close</button>
+              </div>
+            </div>
+          )}
+
           <form className="task-form" onSubmit={handleAddHabit}>
             <input
               type="text"
@@ -282,7 +320,6 @@ function App() {
                           <span className="stepper-value">
                             {getTodayValue(habit.id)} {categoryUnits[habit.category] || ''}
                           </span>
-
                           <button onClick={() => handleChangeValue(habit, 0.5)}>+</button>
                         </div>
                       </>
