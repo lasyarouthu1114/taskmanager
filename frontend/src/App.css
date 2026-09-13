@@ -243,3 +243,23 @@ h1 {
   border-radius: 50%;
   display: inline-block;
 }
+.edit-day-panel {
+  margin-top: 16px;
+  border-top: 1px solid #444;
+  padding-top: 16px;
+}
+
+.edit-day-panel h4 {
+  margin-bottom: 10px;
+  color: #ccc;
+}
+.future-day {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.report-stat {
+  margin-left: auto;
+  font-size: 13px;
+  color: #a8a4ff;
+  font-weight: 600;
+}

@@ -34,6 +34,7 @@ function App() {
   const [showCalendar, setShowCalendar] = useState(false)
   const [calendarMonth, setCalendarMonth] = useState(new Date())
   const [selectedEditDate, setSelectedEditDate] = useState(null)
+  const [showWeeklyReport, setShowWeeklyReport] = useState(false)
 
 
   const today = new Date().toISOString().split('T')[0]
@@ -242,8 +243,37 @@ function getHabitDotsForDay(date) {
       }).then(() => fetchHabitLogs())
     }
   }
+  function getLast7Days() {
+    const days = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      days.push(formatDate(d))
+    }
+    return days
+  }
 
-  function handleChangeValue(habit, delta) {
+  function getWeeklyStats(habit) {
+    const last7 = getLast7Days()
+    const relevantLogs = habitLogs.filter(
+      (log) => log.habit === habit.id && last7.includes(log.date)
+    )
+
+    if (habit.is_numeric) {
+      const total = relevantLogs.reduce((sum, log) => sum + (log.value || 0), 0)
+      const daysLogged = relevantLogs.length
+      const average = daysLogged > 0 ? (total / daysLogged).toFixed(1) : 0
+      const goalHit = habit.goal_value
+        ? relevantLogs.filter((log) => (log.value || 0) >= habit.goal_value).length
+        : null
+
+      return { type: 'numeric', average, daysLogged, goalHit }
+    } else {
+      const completedDays = relevantLogs.filter((log) => log.is_completed).length
+      return { type: 'boolean', completedDays }
+    }
+  }
+    function handleChangeValue(habit, delta) {
     const existingLog = habitLogs.find(
       (log) => log.habit === habit.id && log.date === today
     )
@@ -334,6 +364,45 @@ function getHabitDotsForDay(date) {
           >
             📅
           </button>
+          <button className="calendar-icon-btn" onClick={() => setShowWeeklyReport(true)}>
+            📊
+          </button>
+          
+          {showWeeklyReport && (
+            <div className="modal-overlay" onClick={() => setShowWeeklyReport(false)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <h3>Weekly Report</h3>
+
+                {Object.keys(groupHabitsByCategory(habits)).map((categoryKey) => (
+                  <div key={categoryKey} className="category-section">
+                    <h4>{categoryLabels[categoryKey] || categoryKey}</h4>
+                    <ul className="task-list">
+                      {groupHabitsByCategory(habits)[categoryKey].map((habit) => {
+                        const stats = getWeeklyStats(habit)
+                        return (
+                          <li className="task-item" key={habit.id}>
+                            <span>{habit.name}</span>
+                            {stats.type === 'boolean' ? (
+                              <span className="report-stat">
+                                {stats.completedDays}/7 days
+                              </span>
+                            ) : (
+                              <span className="report-stat">
+                                avg {stats.average} {categoryUnits[habit.category] || ''}
+                                {stats.goalHit !== null && ` · goal hit ${stats.goalHit}/7`}
+                              </span>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                ))}
+
+                <button onClick={() => setShowWeeklyReport(false)}>Close</button>
+              </div>
+            </div>
+          )}
 
           {showCalendar && (
             <div className="modal-overlay" onClick={() => setShowCalendar(false)}>
@@ -374,8 +443,12 @@ function getHabitDotsForDay(date) {
                   {getDaysInMonth(calendarMonth).map((day) => (
                     <div
                       key={day.toISOString()}
-                      className="calendar-day"
-                      onClick={() => setSelectedEditDate(day)}
+                      className={`calendar-day ${day > new Date() ? 'future-day' : ''}`}
+                      onClick={() => {
+                        if (day <= new Date()) {
+                          setSelectedEditDate(day)
+                        }
+                      }}
                     >
                       <div>{day.getDate()}</div>
                       <div className="dot-row">
