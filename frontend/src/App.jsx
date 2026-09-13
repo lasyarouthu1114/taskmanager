@@ -49,35 +49,38 @@ function App() {
   }
 
   return (
-    <div>
+    <div className="app-container">
       <h1>My Tasks</h1>
 
-      <form onSubmit={handleAddTask}>
+      <form className="task-form" onSubmit={handleAddTask}>
         <input
           type="text"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           placeholder="New task title"
         />
-        <button type="submit">Add Task</button>
+        <button type="submit">Add</button>
       </form>
 
-      <ul>
+      <ul className="task-list">
         {tasks.map((task) => (
-          <li key={task.id}>
+          <li className="task-item" key={task.id}>
             <input
               type="checkbox"
               checked={task.is_completed}
               onChange={() => handleToggleComplete(task)}
             />
-            <span
-              style={{
-                textDecoration: task.is_completed ? 'line-through' : 'none',
-              }}
-            >
-              {task.title}
-            </span>
-            <button onClick={() => handleDelete(task.id)}>Delete</button>
+            <div className="task-info">
+              <span className={task.is_completed ? 'completed' : ''}>
+                {task.title}
+              </span>
+              {task.due_date && (
+                <span className="due-date">Due: {task.due_date}</span>
+              )}
+            </div>
+            <button className="delete-btn" onClick={() => handleDelete(task.id)}>
+              Delete
+            </button>
           </li>
         ))}
       </ul>

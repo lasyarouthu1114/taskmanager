@@ -11,3 +11,35 @@ class Task(models.Model):
 
     def __str__(self):
         return self.title
+
+class Habit(models.Model):
+    CATEGORY_CHOICES = [
+        ('journaling', 'Journaling'),
+        ('fitness', 'Fitness'),
+        ('nutrition', 'Nutrition'),
+        ('supplement', 'Supplement'),
+        ('sleep', 'Sleep'),
+        ('mood', 'Mood'),
+        ('screen_time', 'Screen Time'),
+        ('study', 'Study'),
+        ('custom', 'Custom'),
+    ]
+
+    name = models.CharField(max_length=100)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='custom')
+    reminder_time = models.TimeField(null=True, blank=True)
+    goal_value = models.FloatField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class HabitLog(models.Model):
+    habit = models.ForeignKey(Habit, on_delete=models.CASCADE, related_name='logs')
+    date = models.DateField()
+    is_completed = models.BooleanField(default=False)
+    value = models.FloatField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.habit.name} - {self.date}"
