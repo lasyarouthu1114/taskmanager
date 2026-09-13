@@ -21,9 +21,13 @@ const categoryUnits = {
   custom: '',
 }
 
+const quadrantOrder = ['Do First', 'Schedule', 'Quick Wins', 'Later']
+
 function App() {
   const [tasks, setTasks] = useState([])
   const [newTitle, setNewTitle] = useState('')
+  const [newDueDate, setNewDueDate] = useState('')
+  const [newPriority, setNewPriority] = useState(1)
   const [habits, setHabits] = useState([])
   const [habitLogs, setHabitLogs] = useState([])
   const [activeView, setActiveView] = useState('tasks')
@@ -35,11 +39,9 @@ function App() {
   const [calendarMonth, setCalendarMonth] = useState(new Date())
   const [selectedEditDate, setSelectedEditDate] = useState(null)
   const [showWeeklyReport, setShowWeeklyReport] = useState(false)
-
-
-  const today = new Date().toISOString().split('T')[0]
   const [selectedCalendarHabits, setSelectedCalendarHabits] = useState([])
 
+  const today = new Date().toISOString().split('T')[0]
   const habitColors = ['#6c63ff', '#ff6584', '#43c6ac', '#f9c74f', '#f3722c', '#90be6d']
 
   function getHabitColor(habitId) {
@@ -77,11 +79,17 @@ function App() {
     fetch('http://127.0.0.1:8000/api/tasks/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: newTitle }),
+      body: JSON.stringify({
+        title: newTitle,
+        due_date: newDueDate || null,
+        priority: Number(newPriority),
+      }),
     })
       .then((response) => response.json())
       .then(() => {
         setNewTitle('')
+        setNewDueDate('')
+        setNewPriority(1)
         fetchTasks()
       })
   }
@@ -102,6 +110,35 @@ function App() {
     }).then(() => {
       fetchTasks()
     })
+  }
+
+  function getTaskQuadrant(task) {
+    const isImportant = task.priority >= 2
+
+    let isUrgent = false
+    if (task.due_date) {
+      const due = new Date(task.due_date)
+      const now = new Date()
+      const diffDays = (due - now) / (1000 * 60 * 60 * 24)
+      isUrgent = diffDays <= 2
+    }
+
+    if (isUrgent && isImportant) return 'Do First'
+    if (!isUrgent && isImportant) return 'Schedule'
+    if (isUrgent && !isImportant) return 'Quick Wins'
+    return 'Later'
+  }
+
+  function groupTasksByQuadrant() {
+    const grouped = { 'Do First': [], 'Schedule': [], 'Quick Wins': [], 'Later': [] }
+
+    tasks
+      .filter((task) => !task.is_completed)
+      .forEach((task) => {
+        grouped[getTaskQuadrant(task)].push(task)
+      })
+
+    return grouped
   }
 
   function isHabitCompletedToday(habitId) {
@@ -134,6 +171,7 @@ function App() {
     }
     return days
   }
+
   function goToPreviousMonth() {
     setCalendarMonth(
       new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1)
@@ -145,21 +183,24 @@ function App() {
       new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1)
     )
   }
+
   function formatDate(date) {
     return date.toISOString().split('T')[0]
   }
-function getHabitDotsForDay(date) {
-  const dateStr = formatDate(date)
 
-  return selectedCalendarHabits.filter((habitId) =>
-    habitLogs.some(
-      (log) =>
-        log.habit === habitId &&
-        log.date === dateStr &&
-        (log.is_completed || (log.value && log.value > 0))
+  function getHabitDotsForDay(date) {
+    const dateStr = formatDate(date)
+
+    return selectedCalendarHabits.filter((habitId) =>
+      habitLogs.some(
+        (log) =>
+          log.habit === habitId &&
+          log.date === dateStr &&
+          (log.is_completed || (log.value && log.value > 0))
+      )
     )
-  )
-}
+  }
+
   function handleAddHabit(event) {
     event.preventDefault()
 
@@ -209,6 +250,7 @@ function getHabitDotsForDay(date) {
     )
     return log ? log.value || 0 : 0
   }
+
   function isHabitCompletedOnDate(habitId, dateStr) {
     return habitLogs.some(
       (log) => log.habit === habitId && log.date === dateStr && log.is_completed
@@ -243,6 +285,7 @@ function getHabitDotsForDay(date) {
       }).then(() => fetchHabitLogs())
     }
   }
+
   function getLast7Days() {
     const days = []
     for (let i = 6; i >= 0; i--) {
@@ -273,7 +316,8 @@ function getHabitDotsForDay(date) {
       return { type: 'boolean', completedDays }
     }
   }
-    function handleChangeValue(habit, delta) {
+
+  function handleChangeValue(habit, delta) {
     const existingLog = habitLogs.find(
       (log) => log.habit === habit.id && log.date === today
     )
@@ -323,31 +367,74 @@ function getHabitDotsForDay(date) {
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="New task title"
             />
+            <input
+              type="date"
+              value={newDueDate}
+              onChange={(e) => setNewDueDate(e.target.value)}
+            />
+            <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)}>
+              <option value={1}>Low</option>
+              <option value={2}>Medium</option>
+              <option value={3}>High</option>
+            </select>
             <button type="submit">Add</button>
           </form>
 
-          <ul className="task-list">
-            {tasks.map((task) => (
-              <li className="task-item" key={task.id}>
-                <input
-                  type="checkbox"
-                  checked={task.is_completed}
-                  onChange={() => handleToggleComplete(task)}
-                />
-                <div className="task-info">
-                  <span className={task.is_completed ? 'completed' : ''}>
-                    {task.title}
-                  </span>
-                  {task.due_date && (
-                    <span className="due-date">Due: {task.due_date}</span>
-                  )}
-                </div>
-                <button className="delete-btn" onClick={() => handleDelete(task.id)}>
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
+          {quadrantOrder.map((quadrant) => {
+            const quadrantTasks = groupTasksByQuadrant()[quadrant]
+            if (quadrantTasks.length === 0) return null
+
+            return (
+              <div key={quadrant} className="category-section">
+                <h3>{quadrant}</h3>
+                <ul className="task-list">
+                  {quadrantTasks.map((task) => (
+                    <li className="task-item" key={task.id}>
+                      <input
+                        type="checkbox"
+                        checked={task.is_completed}
+                        onChange={() => handleToggleComplete(task)}
+                      />
+                      <div className="task-info">
+                        <span>{task.title}</span>
+                        {task.due_date && (
+                          <span className="due-date">Due: {task.due_date}</span>
+                        )}
+                      </div>
+                      <button className="delete-btn" onClick={() => handleDelete(task.id)}>
+                        Delete
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
+
+          {tasks.some((task) => task.is_completed) && (
+            <div className="category-section">
+              <h3>Completed</h3>
+              <ul className="task-list">
+                {tasks
+                  .filter((task) => task.is_completed)
+                  .map((task) => (
+                    <li className="task-item" key={task.id}>
+                      <input
+                        type="checkbox"
+                        checked={task.is_completed}
+                        onChange={() => handleToggleComplete(task)}
+                      />
+                      <div className="task-info">
+                        <span className="completed">{task.title}</span>
+                      </div>
+                      <button className="delete-btn" onClick={() => handleDelete(task.id)}>
+                        Delete
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
         </>
       )}
 
@@ -367,7 +454,7 @@ function getHabitDotsForDay(date) {
           <button className="calendar-icon-btn" onClick={() => setShowWeeklyReport(true)}>
             📊
           </button>
-          
+
           {showWeeklyReport && (
             <div className="modal-overlay" onClick={() => setShowWeeklyReport(false)}>
               <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -558,7 +645,7 @@ function getHabitDotsForDay(date) {
                         <input
                           type="checkbox"
                           checked={isHabitCompletedToday(habit.id)}
-                          onChange={() => handleToggleHabit(habit)}
+                          onChange={() => handleToggleHabitForDate(habit, today)}
                         />
                         <span className={isHabitCompletedToday(habit.id) ? 'completed' : ''}>
                           {habit.name}
