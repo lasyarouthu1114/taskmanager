@@ -143,6 +143,21 @@ function App() {
       new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1)
     )
   }
+  function formatDate(date) {
+    return date.toISOString().split('T')[0]
+  }
+function getHabitDotsForDay(date) {
+  const dateStr = formatDate(date)
+
+  return selectedCalendarHabits.filter((habitId) =>
+    habitLogs.some(
+      (log) =>
+        log.habit === habitId &&
+        log.date === dateStr &&
+        (log.is_completed || (log.value && log.value > 0))
+    )
+  )
+}
   function handleAddHabit(event) {
     event.preventDefault()
 
@@ -319,13 +334,25 @@ function App() {
                     </label>
                   ))}
                 </div>
+
                 <div className="calendar-grid">
                   {getDaysInMonth(calendarMonth).map((day) => (
                     <div key={day.toISOString()} className="calendar-day">
-                      {day.getDate()}
+                      <div>{day.getDate()}</div>
+                      <div className="dot-row">
+                        {getHabitDotsForDay(day).map((habitId) => (
+                          <span
+                            key={habitId}
+                            className="day-dot"
+                            style={{ backgroundColor: getHabitColor(habitId) }}
+                          ></span>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
+
+
                 <button onClick={() => setShowCalendar(false)}>Close</button>
               </div>
             </div>
