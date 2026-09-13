@@ -34,7 +34,16 @@ function App() {
   const [showCalendar, setShowCalendar] = useState(false)
   const [calendarMonth, setCalendarMonth] = useState(new Date())
 
+
   const today = new Date().toISOString().split('T')[0]
+  const [selectedCalendarHabits, setSelectedCalendarHabits] = useState([])
+
+  const habitColors = ['#6c63ff', '#ff6584', '#43c6ac', '#f9c74f', '#f3722c', '#90be6d']
+
+  function getHabitColor(habitId) {
+    const index = habits.findIndex((h) => h.id === habitId)
+    return habitColors[index % habitColors.length]
+  }
 
   useEffect(() => {
     fetchTasks()
@@ -123,7 +132,17 @@ function App() {
     }
     return days
   }
+  function goToPreviousMonth() {
+    setCalendarMonth(
+      new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1)
+    )
+  }
 
+  function goToNextMonth() {
+    setCalendarMonth(
+      new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1)
+    )
+  }
   function handleAddHabit(event) {
     event.preventDefault()
 
@@ -256,16 +275,50 @@ function App() {
         <>
           <h2>Today's Habits</h2>
 
-          <button className="calendar-icon-btn" onClick={() => setShowCalendar(true)}>
+          <button
+            className="calendar-icon-btn"
+            onClick={() => {
+              setCalendarMonth(new Date())
+              setShowCalendar(true)
+            }}
+          >
             📅
           </button>
 
           {showCalendar && (
             <div className="modal-overlay" onClick={() => setShowCalendar(false)}>
               <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <h3>
-                  {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                </h3>
+                <div className="calendar-nav">
+                  <button onClick={goToPreviousMonth}>←</button>
+                  <h3>
+                    {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                  </h3>
+                  <button onClick={goToNextMonth}>→</button>
+                </div>
+                <div className="habit-picker">
+                  {habits.map((habit) => (
+                    <label key={habit.id} className="habit-picker-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedCalendarHabits.includes(habit.id)}
+                        onChange={() => {
+                          if (selectedCalendarHabits.includes(habit.id)) {
+                            setSelectedCalendarHabits(
+                              selectedCalendarHabits.filter((id) => id !== habit.id)
+                            )
+                          } else {
+                            setSelectedCalendarHabits([...selectedCalendarHabits, habit.id])
+                          }
+                        }}
+                      />
+                      <span
+                        className="habit-color-dot"
+                        style={{ backgroundColor: getHabitColor(habit.id) }}
+                      ></span>
+                      {habit.name}
+                    </label>
+                  ))}
+                </div>
                 <div className="calendar-grid">
                   {getDaysInMonth(calendarMonth).map((day) => (
                     <div key={day.toISOString()} className="calendar-day">
@@ -309,6 +362,7 @@ function App() {
           {Object.keys(groupHabitsByCategory(habits)).map((categoryKey) => (
             <div key={categoryKey} className="category-section">
               <h3>{categoryLabels[categoryKey] || categoryKey}</h3>
+
               <ul className="task-list">
                 {groupHabitsByCategory(habits)[categoryKey].map((habit) => (
                   <li className="task-item" key={habit.id}>
