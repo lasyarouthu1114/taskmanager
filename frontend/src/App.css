@@ -104,3 +104,45 @@ h1 {
   color: #aaa;
   margin-top: 2px;
 }
+.category-section {
+  margin-top: 20px;
+}
+
+.category-section h3 {
+  color: #aaa;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #ccc;
+}
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.stepper button {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: #6c63ff;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.stepper-value {
+  min-width: 30px;
+  text-align: center;
+  font-weight: 600;
+}

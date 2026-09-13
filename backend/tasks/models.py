@@ -24,7 +24,7 @@ class Habit(models.Model):
         ('study', 'Study'),
         ('custom', 'Custom'),
     ]
-
+    is_numeric = models.BooleanField(default=False)
     name = models.CharField(max_length=100, unique=True)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='custom')
     reminder_time = models.TimeField(null=True, blank=True)
